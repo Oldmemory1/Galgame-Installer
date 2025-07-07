@@ -1,7 +1,5 @@
 package com.test;
 
-import lombok.extern.java.Log;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.logging.*;
@@ -23,13 +21,14 @@ public class Main {
         Logger logger = Logger.getLogger("GUI");
         logger.setLevel(Level.ALL);
         logger.addHandler(fileHandler);
-        if(f.exists()){
+        /*if(f.exists()){
             logger.info("检测到逻辑文件，成功运行");
             new GUI("Windows Installer");
         }else {
             logger.info("不允许运行");
             new ErrorGUI();
-        }
+        }*/
+        new GUI("WindowsInstaller");
         fileHandler.close();
 
     }
