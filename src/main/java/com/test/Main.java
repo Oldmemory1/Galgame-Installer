@@ -7,7 +7,7 @@ import java.util.logging.*;
 
 public class Main {
     public static void main(String[] args) throws IOException {
-        File f=new File("./test1.txt");
+        //File f=new File("./test1.txt");
         Logger rootLogger = Logger.getLogger("");
         Handler[] handlers = rootLogger.getHandlers();
         for (Handler handler : handlers) {
