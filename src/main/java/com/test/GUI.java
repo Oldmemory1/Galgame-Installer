@@ -1,16 +1,35 @@
-import lombok.extern.java.Log;
+package com.test;
+
 import org.apache.ibatis.io.Resources;
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
 import java.io.*;
 import java.nio.charset.Charset;
 import java.util.concurrent.*;
+import java.util.logging.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
-@Log
+
+
+
+
 public class GUI {
     private final ThreadPoolExecutor executor = new ThreadPoolExecutor(4, 4, 5, TimeUnit.SECONDS, new ArrayBlockingQueue<>(2), r -> new Thread(r, "线程:" + Thread.currentThread().getName()));
     public GUI(String Title) throws IOException {
+        Logger rootLogger = Logger.getLogger("");
+        Handler[] handlers = rootLogger.getHandlers();
+        for (Handler handler : handlers) {
+            if (handler instanceof ConsoleHandler) {
+                rootLogger.removeHandler(handler);
+            }
+        }
+        FileHandler fileHandler = new FileHandler("GUI.log",true);
+        fileHandler.setFormatter(new SimpleFormatter()); // 文本格式
+        fileHandler.setLevel(Level.ALL);
+        Logger logger = Logger.getLogger("GUI");
+        logger.setLevel(Level.ALL);
+        logger.addHandler(fileHandler);
         final String[] UpZipPlace = {""};
         JFrame frame = new JFrame(Title);
         Container container = frame.getContentPane();
@@ -21,7 +40,7 @@ public class GUI {
         button2.setBounds(50, 150, 150, 50);
         JLabel label1 = new JLabel("安装初始化已完成");
         label1.setBounds(50, 250, 300, 50);
-        JLabel label2 = new JLabel("9-nine-九次九日九重色安装程序");
+        JLabel label2 = new JLabel("Windows Installer");
         label2.setFont(new Font("微软雅黑", Font.BOLD, 20));
         label2.setForeground(Color.CYAN);
         label2.setBounds(50, 500, 500, 50);
@@ -40,7 +59,7 @@ public class GUI {
         label3.setIcon(new ImageIcon(Resources.getResourceURL("1.png")));
         container.add(label3);
 
-        button1.addActionListener(e -> {
+        button1.addActionListener((ActionEvent e) -> {
             JFileChooser fileChooser = new JFileChooser();
             fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
             int i = fileChooser.showOpenDialog(frame.getContentPane());
@@ -48,12 +67,12 @@ public class GUI {
                 File selectedFile = fileChooser.getSelectedFile();
                 String s = selectedFile.getAbsolutePath();
                 UpZipPlace[0] = s;
-                log.info("选定文件路径:"+selectedFile.getAbsolutePath());
-                log.info("选定文件路径"+UpZipPlace[0]);
+                logger.info("选定文件路径:"+selectedFile.getAbsolutePath());
+                logger.info("选定文件路径"+UpZipPlace[0]);
                 button2.setEnabled(true);
             }
         });
-        button2.addActionListener(e -> {
+        button2.addActionListener((ActionEvent e) -> {
             button2.setEnabled(false);
             button1.setEnabled(false);
             button3.setEnabled(false);
@@ -65,10 +84,10 @@ public class GUI {
                 try {
                     TimeUnit.SECONDS.sleep(3);
                 } catch (InterruptedException ex) {
-                    log.severe("解压异常:"+ex.getMessage());
+                    logger.severe("解压异常:"+ex.getMessage());
                 }
                 try{
-                        ZipInputStream zipInputStream = new ZipInputStream(Resources.getResourceAsStream("9nine-1.zip"),Charset.forName("GBK"));
+                        ZipInputStream zipInputStream = new ZipInputStream(Resources.getResourceAsStream("Data.zip"),Charset.forName("GBK"));
                         ZipEntry zipEntry;
                         byte[] byteArray;
                         int len;
@@ -91,13 +110,13 @@ public class GUI {
                                     fileOutputStream.write(byteArray, 0, len);
                                 }
                             } catch (IOException ex) {
-                                log.warning("解压异常:"+ex.getMessage());
+                                logger.warning("解压异常:"+zipEntry.getName()+ex.getMessage());
                             }
-                            log.info("正在解压:"+UpZipPlace[0]+"/"+zipEntry.getName());
+                            logger.info("正在解压:"+UpZipPlace[0]+"/"+zipEntry.getName());
                             progressBar.setString("正在解压:"+UpZipPlace[0]+"/"+zipEntry.getName());
                         }
                 } catch (Exception ex) {
-                    log.warning("解压异常:"+ex.getMessage());
+                    logger.warning("解压异常:"+ex.getMessage());
                 }
 
                 label1.setText("安装完成");
@@ -109,7 +128,7 @@ public class GUI {
             });
 
         });
-        button3.addActionListener(e -> System.exit(0));
+        button3.addActionListener((ActionEvent e) -> {System.exit(0); fileHandler.close();});
         container.add(button1);
         container.add(button2);
         container.add(button3);
