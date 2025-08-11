@@ -15,7 +15,7 @@ import java.util.zip.ZipInputStream;
 
 
 public class GUI {
-    private final ThreadPoolExecutor executor = new ThreadPoolExecutor(4, 4, 5, TimeUnit.SECONDS, new ArrayBlockingQueue<>(2), r -> new Thread(r, "线程:" + Thread.currentThread().getName()));
+
     public GUI(String Title) throws IOException {
         Logger rootLogger = Logger.getLogger("");
         Handler[] handlers = rootLogger.getHandlers();
@@ -48,7 +48,7 @@ public class GUI {
         container.add(label2);
         JProgressBar progressBar = new JProgressBar();
         progressBar.setStringPainted(true);
-        progressBar.setIndeterminate(true);
+        progressBar.setIndeterminate(false);
         progressBar.setBounds(50, 350, 500, 50);
         progressBar.setString("等待安装...");
         container.add(progressBar);
@@ -58,6 +58,7 @@ public class GUI {
         label3.setBounds(500,50,40,40);
         label3.setIcon(new ImageIcon(Resources.getResourceURL("1.png")));
         container.add(label3);
+
 
         button1.addActionListener((ActionEvent e) -> {
             JFileChooser fileChooser = new JFileChooser();
@@ -72,62 +73,95 @@ public class GUI {
                 button2.setEnabled(true);
             }
         });
+
         button2.addActionListener((ActionEvent e) -> {
             button2.setEnabled(false);
             button1.setEnabled(false);
             button3.setEnabled(false);
-            executor.execute(() -> {
-                label1.setText("正在安装中,请勿点击任何按钮");
-                progressBar.setString("正在安装...");
-            });
-            executor.execute(() -> {
-                try {
-                    TimeUnit.SECONDS.sleep(3);
-                } catch (InterruptedException ex) {
-                    logger.severe("解压异常:"+ex.getMessage());
-                }
-                try{
-                        ZipInputStream zipInputStream = new ZipInputStream(Resources.getResourceAsStream("Data.zip"),Charset.forName("GBK"));
+
+            SwingWorker<Void, String> worker = new SwingWorker<>() {
+                @Override
+                protected Void doInBackground() throws Exception {
+                    publish("正在安装中,请勿点击任何按钮");
+
+                    // 先统计总文件数
+                    int totalFiles = 0;
+                    try (ZipInputStream zis = new ZipInputStream(
+                            Resources.getResourceAsStream("Data.zip"), Charset.forName("GBK"))) {
+                        ZipEntry entry;
+                        while ((entry = zis.getNextEntry()) != null) {
+                            if (!entry.isDirectory()) {
+                                totalFiles++;
+                            }
+                        }
+                    }
+
+                    int processedFiles = 0;
+                    try (ZipInputStream zipInputStream = new ZipInputStream(
+                            Resources.getResourceAsStream("Data.zip"), Charset.forName("GBK"))) {
                         ZipEntry zipEntry;
                         byte[] byteArray;
                         int len;
-                        //遍历zip文件中的所有项，并逐个解压到指定的目录中
+
                         while ((zipEntry = zipInputStream.getNextEntry()) != null) {
-                            if(zipEntry.isDirectory()){
+                            if (zipEntry.isDirectory()) {
                                 continue;
                             }
                             String outName = UpZipPlace[0] + "/" + zipEntry.getName();
                             File outFile = new File(outName);
                             File tempFile = new File(outName.substring(0, outName.lastIndexOf("/")));
                             if (!tempFile.exists()) {
-                                boolean b1=tempFile.mkdirs();
+                                tempFile.mkdirs();
                             }
-                            //UpZipPlace[0]+"/"+zipEntry.getName()))
-                            try (FileOutputStream fileOutputStream = new FileOutputStream(
-                                    outFile )) {
+
+                            try (FileOutputStream fileOutputStream = new FileOutputStream(outFile)) {
                                 byteArray = new byte[1024];
                                 while ((len = zipInputStream.read(byteArray)) != -1) {
                                     fileOutputStream.write(byteArray, 0, len);
                                 }
-                            } catch (IOException ex) {
-                                logger.warning("解压异常:"+zipEntry.getName()+ex.getMessage());
                             }
-                            logger.info("正在解压:"+UpZipPlace[0]+"/"+zipEntry.getName());
-                            progressBar.setString("正在解压:"+UpZipPlace[0]+"/"+zipEntry.getName());
+
+                            processedFiles++;
+                            int progress = (int) ((processedFiles / (double) totalFiles) * 100);
+                            setProgress(progress); // 更新进度条
+                            publish("正在解压: " + zipEntry.getName());
                         }
-                } catch (Exception ex) {
-                    logger.warning("解压异常:"+ex.getMessage());
+                    } catch (Exception ex) {
+                        publish("解压异常: " + ex.getMessage());
+                    }
+
+                    return null;
                 }
 
-                label1.setText("安装完成");
-                progressBar.setString("安装完成");
-                progressBar.setIndeterminate(false);
-                progressBar.setValue(100);
-                button3.setEnabled(true);
+                @Override
+                protected void process(java.util.List<String> chunks) {
+                    String latest = chunks.get(chunks.size() - 1);
+                    progressBar.setString(latest);
+                    label1.setText(latest);
+                }
 
+                @Override
+                protected void done() {
+                    label1.setText("安装完成");
+                    progressBar.setString("安装完成");
+                    progressBar.setValue(100);
+                    button3.setEnabled(true);
+                }
+            };
+
+            // 监听进度更新
+            worker.addPropertyChangeListener(evt -> {
+                if ("progress".equals(evt.getPropertyName())) {
+                    int value = (Integer) evt.getNewValue();
+                    progressBar.setValue(value);
+                }
             });
 
+            worker.execute();
         });
+
+
+
         button3.addActionListener((ActionEvent e) -> {System.exit(0); fileHandler.close();});
         container.add(button1);
         container.add(button2);
