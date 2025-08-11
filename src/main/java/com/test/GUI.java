@@ -6,15 +6,11 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.io.*;
 import java.nio.charset.Charset;
-import java.util.concurrent.*;
 import java.util.logging.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
-
-
-
-
 public class GUI {
+    private final PropertiesReader propertiesReader=new PropertiesReader("settings.properties");
 
     public GUI(String Title) throws IOException {
         Logger rootLogger = Logger.getLogger("");
@@ -56,7 +52,7 @@ public class GUI {
         button3.setBounds(250, 50, 150, 50);
         JLabel label3=new JLabel();
         label3.setBounds(500,50,40,40);
-        label3.setIcon(new ImageIcon(Resources.getResourceURL("1.png")));
+        label3.setIcon(new ImageIcon(Resources.getResourceURL(propertiesReader.ReadProperties("icon_name"))));
         container.add(label3);
 
 
@@ -87,7 +83,7 @@ public class GUI {
                     // 先统计总文件数
                     int totalFiles = 0;
                     try (ZipInputStream zis = new ZipInputStream(
-                            Resources.getResourceAsStream("Data.zip"), Charset.forName("GBK"))) {
+                            Resources.getResourceAsStream(propertiesReader.ReadProperties("file_name")), Charset.forName("GBK"))) {
                         ZipEntry entry;
                         while ((entry = zis.getNextEntry()) != null) {
                             if (!entry.isDirectory()) {
@@ -98,7 +94,7 @@ public class GUI {
 
                     int processedFiles = 0;
                     try (ZipInputStream zipInputStream = new ZipInputStream(
-                            Resources.getResourceAsStream("Data.zip"), Charset.forName("GBK"))) {
+                            Resources.getResourceAsStream(propertiesReader.ReadProperties("file_name")), Charset.forName("GBK"))) {
                         ZipEntry zipEntry;
                         byte[] byteArray;
                         int len;
